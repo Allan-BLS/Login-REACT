@@ -2,21 +2,21 @@ name: Build do Projeto Node.js
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-    
-uses: actions/checkout@v4
-name: Configurar Node.js
-  uses: actions/setup-node@v4
-  with:
-    node-version: '20'
-name: Instalar dependências
-run: npm install,
-name: Fazer o build do projeto
-run: npm run build
+    - uses: actions/checkout@v4
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Instalar dependências
+      run: npm install
+    - name: Fazer o build do projeto
+      run: npm run build

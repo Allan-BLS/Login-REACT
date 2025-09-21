@@ -1,31 +1,21 @@
 name: CI - Tests + Discord Alerts
 
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened, ready_for_review ]
-  push:            # <- se NÃO quiser alertas em push, remova este bloco
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ "main" ]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:                
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
-defaults:
-  run:
-    shell: bash
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     env:
       CI: true
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,77 +25,57 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
-
-      - name: Preparar variáveis úteis
-        run: |
-          echo "RUN_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "BRANCH_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
       - name: Discord - started
         run: |
           MSG=$(cat <<'EOF'
           {
             "embeds": [{
-              "title": "🚀 CI iniciado — CI - Tests + Discord Alerts",
-              "color": 5814783,
+              "title": "🚀 CI iniciado — ${{ github.workflow }}",
+              "description": "**Repo:** ${{ github.repository }}\n**Branch:** `${{ github.ref_name }}`\n[Ver execução](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 3447003,
               "fields": [
-                { "name": "Repo",   "value": "${{ github.repository }}", "inline": true },
-                { "name": "Branch", "value": "${{ github.ref_name }}",    "inline": true },
-                { "name": "Evento", "value": "${{ github.event_name }}",  "inline": true },
-                { "name": "Autor",  "value": "${{ github.actor }}",       "inline": true },
-                { "name": "Execução", "value": "${{ env.RUN_URL }}" }
+                {"name": "Evento", "value": "`${{ github.event_name }}`", "inline": true},
+                {"name": "Autor", "value": "`${{ github.actor }}`", "inline": true}
               ]
-            }]
-          }
+            }]}
           EOF
           )
-          curl -sS -X POST -H "Content-Type: application/json" \
-               -d "$MSG" "${{ secrets.DISCORD_WEBHOOK_URL }}"
+          curl -X POST -H "Content-Type: application/json" -d "$MSG" "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
-      - name: Instalar dependências
-        run: npm ci --no-audit --no-fund
+      - name: Install
+        run: npm ci
 
-      - name: Executar testes (modo CI)
+      - name: Run unit tests (CI mode)
         run: npm test -- --watchAll=false --ci
 
       - name: Discord - success
         if: success()
         run: |
-          MSG=$(cat <<EOF
-          {
-            "embeds": [{
-              "title": "✅ CI aprovado — CI - Tests + Discord Alerts",
-              "color": 5763719,
-              "fields": [
-                { "name": "Commit", "value": "\`${SHORT_SHA}\`", "inline": true },
-                { "name": "Branch", "value": "${BRANCH_NAME}",   "inline": true },
-                { "name": "Execução", "value": "${RUN_URL}" }
-              ]
-            }]
-          }
+          MSG=$(cat <<'EOF'
+          { "embeds": [{
+              "title": "✅ CI aprovado — ${{ github.workflow }}",
+              "description": "Todos os testes passaram.\n[Ver execução](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 3066993,
+              "fields": [{ "name": "Commit", "value": "`${{ github.sha }}`" }]
+          }]}
           EOF
           )
-          curl -sS -X POST -H "Content-Type: application/json" \
-               -d "$MSG" "${{ secrets.DISCORD_WEBHOOK_URL }}"
+          curl -X POST -H "Content-Type: application/json" -d "$MSG" "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
       - name: Discord - failure
         if: failure()
         run: |
-          MSG=$(cat <<EOF
-          {
-            "embeds": [{
-              "title": "❌ CI falhou — CI - Tests + Discord Alerts",
-              "color": 15548997,
+          MSG=$(cat <<'EOF'
+          { "embeds": [{
+              "title": "❌ CI falhou — ${{ github.workflow }}",
+              "description": "Veja os detalhes da execução:\n[Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 15158332,
               "fields": [
-                { "name": "Commit", "value": "\`${SHORT_SHA}\`", "inline": true },
-                { "name": "Branch", "value": "${BRANCH_NAME}",   "inline": true },
-                { "name": "Ver detalhes", "value": "${RUN_URL}" }
+                { "name": "Branch", "value": "`${{ github.ref_name }}`", "inline": true },
+                { "name": "Autor", "value": "`${{ github.actor }}`", "inline": true }
               ]
-            }]
-          }
+          }]}
           EOF
           )
-          curl -sS -X POST -H "Content-Type: application/json" \
-               -d "$MSG" "${{ secrets.DISCORD_WEBHOOK_URL }}"
+          curl -X POST -H "Content-Type: application/json" -d "$MSG" "${{ secrets.DISCORD_WEBHOOK_URL }}"

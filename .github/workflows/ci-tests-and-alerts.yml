@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ "main" ]
     types: [opened, synchronize, reopened]  # roda ao abrir o PR e a cada novo commit no PR
-  workflow_dispatch:  # opcional: botão "Run workflow" manual na aba Actions
+  workflow_dispatch:  # botão "Run workflow" manual na aba Actions
 
 permissions:
   contents: read

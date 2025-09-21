@@ -1,3 +1,5 @@
+[![CI - Tests + Discord Alerts](https://github.com/Allan-BLS/Login-REACT/actions/workflows/ci-tests-and-alerts.yml/badge.svg?branch=main)](https://github.com/Allan-BLS/Login-REACT/actions/workflows/ci-tests-and-alerts.yml)
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

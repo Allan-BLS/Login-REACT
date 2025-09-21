@@ -1,0 +1,64 @@
+name: CI - Tests + Discord Alerts
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Aviso no Discord: início
+      - name: Discord - started
+        run: |
+          MSG=$(cat <<'EOF'
+          {
+            "content": "🚀 **${{ github.repository }}**: workflow `CI - Tests + Discord Alerts` iniciado.\n• Evento: **${{ github.event_name }}**\n• Autor: **${{ github.actor }}**\n• Branch: **${{ github.ref_name }}**\n• Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+          )
+          curl -X POST -H "Content-Type: application/json" \
+               -d "$MSG" \
+               "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Install
+        run: npm ci
+
+      - name: Run unit tests (CI mode)
+        run: npm test -- --watchAll=false --ci
+
+      # Aviso no Discord: sucesso
+      - name: Discord - success
+        if: success()
+        run: |
+          MSG=$(cat <<'EOF'
+          { "content": "✅ **SUCESSO** em `CI - Tests + Discord Alerts`.\nTodos os testes passaram.\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" }
+          EOF
+          )
+          curl -X POST -H "Content-Type: application/json" \
+               -d "$MSG" \
+               "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      # Aviso no Discord: falha
+      - name: Discord - failure
+        if: failure()
+        run: |
+          MSG=$(cat <<'EOF'
+          { "content": "❌ **FALHA** em `CI - Tests + Discord Alerts`.\nVer detalhes: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" }
+          EOF
+          )
+          curl -X POST -H "Content-Type: application/json" \
+               -d "$MSG" \
+               "${{ secrets.DISCORD_WEBHOOK_URL }}"
